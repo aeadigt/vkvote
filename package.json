@@ -1,0 +1,19 @@
+{
+  "name": "vkvote",
+  "version": "1.0.0",
+  "description": "vkvote",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aeadigt/vkvote.git"
+  },
+  "author": "aea",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/komunikator/vkvote/issues"
+  },
+  "homepage": "https://github.com/komunikator/vkvote#readme"
+}
