@@ -4,6 +4,7 @@
   "description": "vkvote",
   "main": "index.js",
   "scripts": {
+    "start": "npm start",
     "test": "npm test"
   },
   "repository": {
