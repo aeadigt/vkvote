@@ -2,6 +2,12 @@
 
 console.log('module index started!');
 
+process.on('uncaughtException', (e) => {
+    console.error('uncaughtException', e);
+});
+
+// https://oauth.vk.com/authorize?client_id=6141200&redirect_uri=https://oauth.vk.com/blank.html&response_type=token&scope=notify,friends,photos,audio,video,docs,notes,pages,status,wall,groups,messages,email,notifications,stats,ads,market,offline
+
 let Vk = require('vksdk');
 
 let vk = new Vk({
@@ -20,12 +26,26 @@ vk.on('serverTokenReady', (data) => {
 // Turn on requests with access tokens
 vk.setSecureRequests(true);
 
-// https://oauth.vk.com/authorize?client_id=6141200&redirect_uri=https://oauth.vk.com/blank.html&response_type=token&scope=notify,friends,photos,audio,video,docs,notes,pages,status,wall,groups,messages,email,notifications,stats,ads,market,offline
-
-// ************************** Запросы **************************
-var access_token = '750188ab8387a4cf2737462be932866c072e1335c2d52b41dee26f0d5ebd1763e9e981962c18a99be4bb9';
 // First you have to pass access_token from client side JS code
+var access_token = '750188ab8387a4cf2737462be932866c072e1335c2d52b41dee26f0d5ebd1763e9e981962c18a99be4bb9';
 vk.setToken(access_token);
+
+// ************************** Express **************************
+
+/* *************** Express *************** */
+let express        = require('express');
+let app            = express();
+
+/* *************** Express Routes *************** */
+app.get('/addvideo', (req, res) => {
+    for (let key in req.query) {
+        console.log(key, ': ', req.query.key);
+    }
+    res.send('a3442615');
+});
+
+app.listen(80);
+// ************************** Запросы **************************
 
 // Получаем список постов с видео
 vk.request('wall.get', { 
@@ -49,7 +69,7 @@ vk.request('wall.get', {
             });
         }
 
-        sendAllNewVideo(videoPosts);
+        // sendAllNewVideo(videoPosts);
     }
 );
 

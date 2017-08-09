@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/komunikator/vkvote#readme",
   "dependencies": {
+    "express": "^4.15.4",
     "vksdk": "^5.3.2"
   }
 }
