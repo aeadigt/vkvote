@@ -37,7 +37,7 @@ let express        = require('express');
 let app            = express();
 
 /* *************** Express Routes *************** */
-app.get('/addvideo', (req, res) => {
+app.post('/addvideo', (req, res) => {
     for (let key in req.query) {
         console.log(key, ': ', req.query.key);
     }
