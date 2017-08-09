@@ -44,6 +44,10 @@ app.post('/addvideo', (req, res) => {
     res.send('a3442615');
 });
 
+app.get('/addvideo', (req, res) => {
+    res.send('a3442615');
+});
+
 app.listen(80);
 // ************************** Запросы **************************
 
