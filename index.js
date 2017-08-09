@@ -42,12 +42,12 @@ app.post('/addvideo', (req, res) => {
     for (let key in req.query) {
         console.log(key, ': ', req.query.key);
     }
-    res.send('a3442615');
+    res.end('a3442615');
 });
 
 app.get('/addvideo', (req, res) => {
     console.log('!!! get addvideo');
-    res.send('a3442615');
+    res.end('a3442615');
 });
 
 app.listen(80,function(){
