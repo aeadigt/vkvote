@@ -42,7 +42,7 @@ app.post('/addvideo', (req, res) => {
     for (let key in req.query) {
         console.log(key, ': ', req.query.key);
     }
-    res.end('a3442615');
+    res.end('be78723e');
 });
 
 app.get('/addvideo', (req, res) => {
@@ -77,7 +77,7 @@ vk.request('wall.get', {
             });
         }
 
-        // sendAllNewVideo(videoPosts);
+        sendAllNewVideo(videoPosts);
     }
 );
 
