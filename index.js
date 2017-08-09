@@ -50,7 +50,9 @@ app.get('/addvideo', (req, res) => {
     res.send('a3442615');
 });
 
-app.listen(80);
+app.listen(80,function(){
+    console.log('Started on PORT 80');
+})
 // ************************** Запросы **************************
 
 // Получаем список постов с видео
