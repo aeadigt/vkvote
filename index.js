@@ -50,7 +50,7 @@ app.get('/addvideo', (req, res) => {
     res.end('a3442615');
 });
 
-app.listen(80,function(){
+app.listen(8000,function(){
     console.log('Started on PORT 80');
 })
 // ************************** Запросы **************************
