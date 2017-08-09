@@ -38,6 +38,7 @@ let app            = express();
 
 /* *************** Express Routes *************** */
 app.post('/addvideo', (req, res) => {
+    console.log('!!! post addvideo');
     for (let key in req.query) {
         console.log(key, ': ', req.query.key);
     }
@@ -45,6 +46,7 @@ app.post('/addvideo', (req, res) => {
 });
 
 app.get('/addvideo', (req, res) => {
+    console.log('!!! get addvideo');
     res.send('a3442615');
 });
 
