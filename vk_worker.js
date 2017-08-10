@@ -1,7 +1,5 @@
 'use strict';
 
-// https://oauth.vk.com/authorize?client_id=6141200&redirect_uri=https://oauth.vk.com/blank.html&response_type=token&scope=notify,friends,photos,audio,video,docs,notes,pages,status,wall,groups,messages,email,notifications,stats,ads,market,offline
-
 // ************************** uncaughtException **************************
 process.on('uncaughtException', (err) => {
     console.error('uncaughtException', err);
@@ -32,7 +30,7 @@ vk.setSecureRequests(true);
 var access_token = '750188ab8387a4cf2737462be932866c072e1335c2d52b41dee26f0d5ebd1763e9e981962c18a99be4bb9';
 vk.setToken(access_token);
 
-
+/*
 // ************************** Vk запросы **************************
 // Получаем список постов с видео
 vk.request('wall.get', { 
@@ -59,6 +57,7 @@ vk.request('wall.get', {
         sendAllNewVideo(videoPosts);
     }
 );
+*/
 
 function sendAllNewVideo(videoPosts) {
     videoPosts.forEach((item) => {
@@ -102,3 +101,122 @@ function sendNewVideo(video, poll) {
         }
     );
 }
+
+
+function getVideoOnOpenGroup() {
+    vk.request('wall.get', { 
+            owner_id: '-150899652', // open
+            extended: 0,
+            filter: 'others',
+            'count': 100
+        }, (data) => {
+            console.log('wall.get: ', data);
+
+            if (data && data.response && data.response.items
+                && Array.isArray(data.response.items) ) {
+                let videoPosts = [];
+
+                data.response.items.forEach((item) => {
+                    if (item && item.attachments && item.attachments[0]
+                        && item.attachments[0].type && item.attachments[0].type == 'video') {
+                        console.log('\r\n Open item: ', item);
+                        console.log('\r\n Open item.attachments[0]: ', item.attachments[0]);
+                        videoPosts.push(item);
+                    }
+                });
+                getVideoOnCloseGroup(videoPosts);
+            }
+        }
+    );
+}
+
+function getVideoOnCloseGroup(openVideo) {
+    vk.request('wall.get', { 
+            owner_id: '-150899833', // close
+            extended: 0,
+            filter: 'others',
+            'count': 100
+        }, (data) => {
+            console.log('wall.get: ', data);
+
+            let closeVideo = [];
+            
+
+            if (data && data.response && data.response.items
+                && Array.isArray(data.response.items) ) {
+
+                data.response.items.forEach((item) => {
+                    if (item && item.attachments && item.attachments[0]
+                        && item.attachments[0].type && item.attachments[0].type == 'video') {
+                        closeVideo.push(item)
+                    }
+                });
+            }
+
+            let newVideo = getNewVideo(openVideo, closeVideo);
+
+            console.log('******************************');
+
+            newVideo.forEach((item) => {
+                if (item && item.attachments && item.attachments[0]
+                    && item.attachments[0].type && item.attachments[0].type == 'video') {
+                    // console.log('\r\n New item: ', item);
+                    console.log('\r\n New item.attachments[0]: ', item.attachments[0]);
+                }
+            });            
+            sendAllNewVideo(newVideo);
+        }
+    );
+}
+
+function getNewVideo(openVideo, closeVideo) {
+    let newVideo = [];
+
+    openVideo.forEach((openVideoItem) => {
+        if (openVideoItem && openVideoItem.attachments && openVideoItem.attachments[0]
+            && openVideoItem.attachments[0].type && openVideoItem.attachments[0].type == 'video') {
+
+            let isOldVideo = closeVideo.some((closeVideoItem) => {
+                if (closeVideoItem && closeVideoItem.attachments && closeVideoItem.attachments[0]
+                    && closeVideoItem.attachments[0].type && closeVideoItem.attachments[0].type == 'video') {
+                        return isSomeVideo(openVideoItem.attachments[0], closeVideoItem.attachments[0]);
+
+                }
+                return false;
+            });
+
+            if (!isOldVideo) {
+                newVideo.push(openVideoItem);
+            }
+        }
+    });
+    return newVideo;
+}
+
+function isSomeVideo(openVideo, closeVideo) {
+    if (openVideo.video.id == closeVideo.video.id
+        && openVideo.video.owner_id == closeVideo.video.owner_id) {
+        return true;
+    }
+    return false;
+}
+
+getVideoOnOpenGroup();
+/*
+let getData = () => {
+    return new Promise(function(resolve, reject) {
+        setTimeout(() => {
+            resolve('Great job, everyone...');
+        }, 500);
+    });
+};
+
+(async () => {
+    async () => {
+        console.log(await getData());
+    };
+
+    await main();
+    console.log('Ron once said,');
+})();
+*/
