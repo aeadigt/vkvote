@@ -7,8 +7,8 @@ process.on('uncaughtException', (e) => {
     console.error('uncaughtException', e);
 });
 
-// let time = 86400000;
-let time = 10000;
+let time = 86400000;
+// let time = 10000;
 
 setInterval(() => {
     console.log('Starting timer');
@@ -70,3 +70,5 @@ function startWorker() {
         }
     }, 1800000);
 }
+
+startWorker();
