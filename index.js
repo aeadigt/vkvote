@@ -1,127 +1,60 @@
 'use strict';
 
-console.log('module index started!');
+// https://oauth.vk.com/authorize?client_id=6141200&redirect_uri=https://oauth.vk.com/blank.html&response_type=token&scope=notify,friends,photos,audio,video,docs,notes,pages,status,wall,groups,messages,email,notifications,stats,ads,market,offline
 
+// ************************** uncaughtException **************************
 process.on('uncaughtException', (e) => {
     console.error('uncaughtException', e);
 });
 
-// https://oauth.vk.com/authorize?client_id=6141200&redirect_uri=https://oauth.vk.com/blank.html&response_type=token&scope=notify,friends,photos,audio,video,docs,notes,pages,status,wall,groups,messages,email,notifications,stats,ads,market,offline
+// let time = 86400000;
+let time = 10000;
 
-let Vk = require('vksdk');
+let timer = setInterval(() => {
+    console.log('Starting timer');
+    startWorker();
+}, time);
 
-let vk = new Vk({
-    'appId'     : 6141200,
-    'appSecret' : '1WhI5iD5nksYNqQi7MQ5',
-    'mode'      : 'oauth',
-    'language'  : 'ru'
-});
-
-// Setup server access token for server API methods
-vk.on('serverTokenReady', (data) => {
-    // Here will be server access token
-    vk.setToken(data.access_token);
-});
-
-// Turn on requests with access tokens
-vk.setSecureRequests(true);
-
-// First you have to pass access_token from client side JS code
-var access_token = '750188ab8387a4cf2737462be932866c072e1335c2d52b41dee26f0d5ebd1763e9e981962c18a99be4bb9';
-vk.setToken(access_token);
+let isRunWorker = false;
 
 // ************************** Express **************************
-
-/* *************** Express *************** */
 let express        = require('express');
 let app            = express();
 
-/* *************** Express Routes *************** */
+/* *************** Routes *************** */
 app.post('/addvideo', (req, res) => {
-    console.log('!!! post addvideo');
-    for (let key in req.query) {
-        console.log(key, ': ', req.query.key);
-    }
+    console.log('Post request addvideo');
+    startWorker();
     res.end('be78723e');
-});
-
-app.get('/addvideo', (req, res) => {
-    console.log('!!! get addvideo');
-    res.end('a3442615');
 });
 
 app.listen(8000,function(){
     console.log('Started on PORT 80');
-})
-// ************************** Запросы **************************
+});
 
-// Получаем список постов с видео
-vk.request('wall.get', { 
-        owner_id: '-150899652',
-        extended: 0,
-        filter: 'others',
-        'count': 100
-    }, (data) => {
-        console.log('wall.get: ', data);
-
-        let videoPosts = [];
-
-        if (data && data.response && data.response.items
-             && Array.isArray(data.response.items) ) {
-
-            data.response.items.forEach((item) => {
-                if (item && item.attachments && item.attachments[0]
-                    && item.attachments[0].type && item.attachments[0].type == 'video') {
-                    videoPosts.push(item)
-                }
-            });
-        }
-
-        sendAllNewVideo(videoPosts);
+// ************************** Timer **************************
+function startWorker() {
+    if (isRunWorker) {
+        console.log('Worker already running');
+        return false;
     }
-);
 
-function sendAllNewVideo(videoPosts) {
-    videoPosts.forEach((item) => {
-        if (item && item.attachments && item.attachments[0] 
-            && item.attachments[0].video.owner_id && item.attachments[0].video.id) {
+    console.log('Start new worker');
 
-            let video = 'video' + item.attachments[0].video.owner_id + '_' + item.attachments[0].video.id;
-            createPoll(video);
-        }
+    isRunWorker = true;
+    console.log(process.cwd() + '/vk_worker.js');
+    let worker = require('child_process').fork(process.cwd() + '/vk_worker.js', { silent: true, execPath: 'node' });
+
+    worker.on('error', function(err) {
+        console.error('worker err: ', err);
     });
-};
 
-function createPoll(video) {
-    vk.request('polls.create', { 
-            owner_id: '-150899833',
-            add_answers: '["5", "4", "3", "2", "1"]',
-            question: 'Ваша оценка за видео',
-            access_token: access_token
-        }, (data) => {
-            console.log('\r\n polls.create: ', data);
-            console.log('\r\n polls.create data.response.id: ', data.response.id);
-
-            if (data && data.response && data.response.id && data.response.owner_id) {
-                let poll = 'poll' + data.response.owner_id + '_' + data.response.id;
-                sendNewVideo(video, poll);
-            }
+    worker.on('close', function(code) {
+        console.log('Close worker code: ', code);
+        isRunWorker = false;
     });
-    
-}
 
-function sendNewVideo(video, poll) {
-    // Отправляем видео
-    vk.request('wall.post', { 
-            // owner_id: '-150899833',
-            owner_id: '-150899833',
-            message: 'Новое видео',
-            attachments: video + ',' + poll,
-            access_token: access_token
-        }, (data) => {
-            console.log('\r\n wall.post: ', data);
-        }
-    );
+    worker.on('message', function(msg) {
+        console.log('Worker msg: ', msg);
+    });
 }
-
-console.log('module index ended!');
