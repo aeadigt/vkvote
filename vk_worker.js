@@ -30,37 +30,10 @@ vk.setSecureRequests(true);
 var access_token = '750188ab8387a4cf2737462be932866c072e1335c2d52b41dee26f0d5ebd1763e9e981962c18a99be4bb9';
 vk.setToken(access_token);
 
-/*
+
 // ************************** Vk запросы **************************
-// Получаем список постов с видео
-vk.request('wall.get', { 
-        owner_id: '-150899652',
-        extended: 0,
-        filter: 'others',
-        'count': 100
-    }, (data) => {
-        console.log('wall.get: ', data);
-
-        let videoPosts = [];
-
-        if (data && data.response && data.response.items
-             && Array.isArray(data.response.items) ) {
-
-            data.response.items.forEach((item) => {
-                if (item && item.attachments && item.attachments[0]
-                    && item.attachments[0].type && item.attachments[0].type == 'video') {
-                    videoPosts.push(item)
-                }
-            });
-        }
-
-        sendAllNewVideo(videoPosts);
-    }
-);
-*/
-
-function sendAllNewVideo(videoPosts) {
-    videoPosts.forEach((item) => {
+function sendAllNewVideo(video) {
+    video.forEach((item) => {
         if (item && item.attachments && item.attachments[0] 
             && item.attachments[0].video.owner_id && item.attachments[0].video.id) {
 
@@ -77,8 +50,8 @@ function createPoll(video) {
             question: 'Ваша оценка за видео',
             access_token: access_token
         }, (data) => {
-            console.log('\r\n polls.create: ', data);
-            console.log('\r\n polls.create data.response.id: ', data.response.id);
+            // console.log('\r\n polls.create: ', data);
+            // console.log('\r\n polls.create data.response.id: ', data.response.id);
 
             if (data && data.response && data.response.id && data.response.owner_id) {
                 let poll = 'poll' + data.response.owner_id + '_' + data.response.id;
@@ -103,94 +76,90 @@ function sendNewVideo(video, poll) {
 }
 
 
-function getVideoOnOpenGroup() {
-    vk.request('wall.get', { 
-            owner_id: '-150899652', // open
-            extended: 0,
-            filter: 'others',
-            'count': 100
-        }, (data) => {
-            console.log('wall.get: ', data);
+async function getVideoOnOpenGroup() {
+    return new Promise(function(resolve) {
+        vk.request('wall.get', { 
+                owner_id: '-150899652', // open
+                extended: 0,
+                filter: 'others',
+                'count': 100
+            }, (data) => {
+                // console.log('wall.get: ', data);
 
-            if (data && data.response && data.response.items
-                && Array.isArray(data.response.items) ) {
-                let videoPosts = [];
+                if (data && data.response && data.response.items
+                    && Array.isArray(data.response.items) ) {
+                    let video = [];
 
-                data.response.items.forEach((item) => {
-                    if (item && item.attachments && item.attachments[0]
-                        && item.attachments[0].type && item.attachments[0].type == 'video') {
-                        console.log('\r\n Open item: ', item);
-                        console.log('\r\n Open item.attachments[0]: ', item.attachments[0]);
-                        videoPosts.push(item);
-                    }
-                });
-                getVideoOnCloseGroup(videoPosts);
-            }
-        }
-    );
-}
-
-function getVideoOnCloseGroup(openVideo) {
-    vk.request('wall.get', { 
-            owner_id: '-150899833', // close
-            extended: 0,
-            filter: 'others',
-            'count': 100
-        }, (data) => {
-            console.log('wall.get: ', data);
-
-            let closeVideo = [];
-            
-
-            if (data && data.response && data.response.items
-                && Array.isArray(data.response.items) ) {
-
-                data.response.items.forEach((item) => {
-                    if (item && item.attachments && item.attachments[0]
-                        && item.attachments[0].type && item.attachments[0].type == 'video') {
-                        closeVideo.push(item)
-                    }
-                });
-            }
-
-            let newVideo = getNewVideo(openVideo, closeVideo);
-
-            console.log('******************************');
-
-            newVideo.forEach((item) => {
-                if (item && item.attachments && item.attachments[0]
-                    && item.attachments[0].type && item.attachments[0].type == 'video') {
-                    // console.log('\r\n New item: ', item);
-                    console.log('\r\n New item.attachments[0]: ', item.attachments[0]);
+                    data.response.items.forEach((item) => {
+                        if (item && item.attachments && item.attachments[0]
+                            && item.attachments[0].type && item.attachments[0].type == 'video') {
+                            // console.log('\r\n Open item: ', item);
+                            // console.log('\r\n Open item.attachments[0]: ', item.attachments[0]);
+                            video.push(item);
+                        }
+                    });
+                    resolve(video);
                 }
-            });            
-            sendAllNewVideo(newVideo);
-        }
-    );
-}
-
-function getNewVideo(openVideo, closeVideo) {
-    let newVideo = [];
-
-    openVideo.forEach((openVideoItem) => {
-        if (openVideoItem && openVideoItem.attachments && openVideoItem.attachments[0]
-            && openVideoItem.attachments[0].type && openVideoItem.attachments[0].type == 'video') {
-
-            let isOldVideo = closeVideo.some((closeVideoItem) => {
-                if (closeVideoItem && closeVideoItem.attachments && closeVideoItem.attachments[0]
-                    && closeVideoItem.attachments[0].type && closeVideoItem.attachments[0].type == 'video') {
-                        return isSomeVideo(openVideoItem.attachments[0], closeVideoItem.attachments[0]);
-
-                }
-                return false;
-            });
-
-            if (!isOldVideo) {
-                newVideo.push(openVideoItem);
             }
-        }
+        );
     });
-    return newVideo;
+}
+
+async function getVideoOnCloseGroup(openVideo) {
+    return new Promise(function(resolve) {
+        vk.request('wall.get', { 
+                owner_id: '-150899833', // close
+                extended: 0,
+                filter: 'others',
+                'count': 100
+            }, (data) => {
+                // console.log('wall.get: ', data);
+
+                let video = [];
+                
+
+                if (data && data.response && data.response.items
+                    && Array.isArray(data.response.items) ) {
+
+                    data.response.items.forEach((item) => {
+                        if (item && item.attachments && item.attachments[0]
+                            && item.attachments[0].type && item.attachments[0].type == 'video') {
+                            video.push(item)
+                        }
+                    });
+                }
+                resolve(video);
+            }
+        );
+    });
+}
+
+async function getNewVideo(openVideo, closeVideo) {
+    return new Promise(function(resolve) {
+        let video = [];
+
+        openVideo.forEach((openVideoItem) => {
+            if (openVideoItem && openVideoItem.attachments && openVideoItem.attachments[0]
+                && openVideoItem.attachments[0].type && openVideoItem.attachments[0].type == 'video') {
+
+                if (!isOldVideo(openVideoItem, closeVideo)) {
+                    video.push(openVideoItem);
+                }
+            }
+        });
+        resolve(video);
+    });
+}
+
+function isOldVideo(openVideoItem, closeVideo) {
+    return closeVideo.some((closeVideoItem) => {
+        if (closeVideoItem && closeVideoItem.attachments && closeVideoItem.attachments[0]
+            && closeVideoItem.attachments[0].type && closeVideoItem.attachments[0].type == 'video') {
+                return isSomeVideo(openVideoItem.attachments[0], closeVideoItem.attachments[0]);
+
+        }
+        return true;
+    });
 }
 
 function isSomeVideo(openVideo, closeVideo) {
@@ -201,22 +170,21 @@ function isSomeVideo(openVideo, closeVideo) {
     return false;
 }
 
-getVideoOnOpenGroup();
-/*
-let getData = () => {
-    return new Promise(function(resolve, reject) {
-        setTimeout(() => {
-            resolve('Great job, everyone...');
-        }, 500);
-    });
-};
+async function updateVideo () {
+    console.log('updateVideo step 1');
+    let videoOpenGroup = await getVideoOnOpenGroup();
+    console.log('\r\n videoOpenGroup: ', videoOpenGroup);
 
-(async () => {
-    async () => {
-        console.log(await getData());
-    };
+    console.log('\r\n updateVideo step 2');
+    let videoCloseGroup = await getVideoOnCloseGroup();
+    console.log('\r\n videoCloseGroup: ', videoCloseGroup);
 
-    await main();
-    console.log('Ron once said,');
-})();
-*/
+    console.log('\r\n updateVideo step 3');
+    let newVideo = await getNewVideo(videoOpenGroup, videoCloseGroup);
+    console.log('\r\n newVideo: ', newVideo);
+
+    console.log('\r\n updateVideo step 4');
+    sendAllNewVideo(newVideo);
+}
+
+updateVideo();
