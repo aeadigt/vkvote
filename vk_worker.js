@@ -8,6 +8,9 @@ process.on('uncaughtException', (err) => {
     process.send('uncaughtException err: ' + err);
 });
 
+setTimeout(() => {
+    precess.exit('Worker Timer 30 min');
+}, 1800000);
 
 // ************************** Vk keys **************************
 let Vk = require('vksdk');
