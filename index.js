@@ -10,11 +10,12 @@ process.on('uncaughtException', (e) => {
 // let time = 86400000;
 let time = 10000;
 
-let timer = setInterval(() => {
+setInterval(() => {
     console.log('Starting timer');
     startWorker();
 }, time);
 
+let timer;
 let isRunWorker = false;
 
 // ************************** Express **************************
@@ -32,7 +33,7 @@ app.listen(8000,function(){
     console.log('Started on PORT 80');
 });
 
-// ************************** Timer **************************
+// ************************** Worker **************************
 function startWorker() {
     if (isRunWorker) {
         console.log('Worker already running');
@@ -42,7 +43,6 @@ function startWorker() {
     console.log('Start new worker');
 
     isRunWorker = true;
-    console.log(process.cwd() + '/vk_worker.js');
     let worker = require('child_process').fork(process.cwd() + '/vk_worker.js', { silent: true, execPath: 'node' });
 
     worker.on('error', function(err) {
@@ -57,4 +57,16 @@ function startWorker() {
     worker.on('message', function(msg) {
         console.log('Worker msg: ', msg);
     });
+
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+        clearTimeout(timer);
+
+        console.log('Worker Timer 30 min');
+
+        if (worker) {
+            worker.kill();
+        }
+    }, 1800000);
 }
