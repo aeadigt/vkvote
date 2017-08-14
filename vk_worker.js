@@ -77,7 +77,7 @@ function getClosePosts(openVideo) {
         vk.request('wall.get', { 
                 owner_id: closeGroup,
                 extended: 0,
-                filter: 'others',
+                filter: 'all',
                 'count': 100
             }, (data) => {
                 if (!data) {
@@ -176,11 +176,11 @@ function createPoll(video) {
 function sendNewVideo(video, poll) {
     // Отправляем видео
     vk.request('wall.post', { 
-            // owner_id: '-150899833',
             owner_id: '-150899833',
             message: 'Новое видео',
             attachments: video + ',' + poll,
-            access_token: access_token
+            access_token: access_token,
+            from_group: 1
         }, (data) => {
             if (!data) {
                 return;
@@ -208,76 +208,100 @@ async function updatePosts () {
 }
 
 // ************************** Update votes **************************
+function getPollById(post) {
+    return new Promise((resolve, reject) => {
+        vk.request('polls.getById', {
+                owner_id: '-150899833',
+                poll_id: post.attachments[1].poll.id,
+                is_board: 0
+            }, (data) => {
+                if (!data) {
+                    return resolve(false);
+                }
 
-function getAverageClosePosts(posts) {
-    return new Promise(function(resolve) {
-        posts.forEach((item) => {
-            if (item && item.attachments && item.attachments[0]
-                && item.attachments[0].type && item.attachments[0].type == 'video'
-                && item.attachments[1] && item.attachments[1].type 
-                && item.attachments[1].type == 'poll'
-                && item.attachments[1].poll && item.attachments[1].poll.id
-                && item.attachments[1].poll.answers[0].id
-                && item.attachments[1].poll.answers[1].id
-                && item.attachments[1].poll.answers[2].id
-                && item.attachments[1].poll.answers[3].id
-                && item.attachments[1].poll.answers[4].id) {
+                if (data && data.response 
+                    && data.response.votes && data.response.votes >= 1) {
+                    // console.log(data.response);
 
-                let answerIds = item.attachments[1].poll.answers[0].id + ',' + item.attachments[1].poll.answers[1].id + ','
-                    item.attachments[1].poll.answers[2].id + ',' + item.attachments[1].poll.answers[3].id + ','
-                    item.attachments[1].poll.answers[4].id;
+                    if (data.response.answers) {
 
-                vk.request('polls.getById', {
-                        owner_id: '-150899833',
-                        poll_id: item.attachments[1].poll.id,
-                        is_board: 0
-                    }, (data) => {
-                        if (!data) {
-                            return;
-                        }
+                        let countVotes = 0;
+                        let sum = 0;
 
-                        if (data.response.votes >= 1) {
-                            console.log(data.response);
-
-                            if (data.response.answers) {
-
-                                let countVotes = 0;
-                                let sum = 0;
-
-                                data.response.answers.forEach((answer) => {
-                                    if (answer && answer.votes && answer.text) {
-                                        sum += Number(answer.votes) * Number(answer.text);
-                                        countVotes += Number(answer.votes);
-                                    }
-                                });
-                                try {
-                                    let average = sum/countVotes;
-                                    console.log('average: ', average);
-                                } catch (err) {
-                                    console.error('error: ', err);
-                                }
+                        data.response.answers.forEach((answer) => {
+                            if (answer && answer.votes && answer.text) {
+                                sum += Number(answer.votes) * Number(answer.text);
+                                countVotes += Number(answer.votes);
                             }
+                        });
+
+                        try {
+                            let average = sum/countVotes;
+                            data.response.average = average;
+                            post.poll = data;
+                            return resolve(post);
+                        } catch (err) {
+                            console.error('error: ', err);
+                            return resolve(false);
                         }
                     }
-                );
+                } else {
+                    return resolve(false);
+                }
             }
-        });
+        );
     });
+};
+
+async function getAverageClosePosts(allClosePosts) {
+    let averageClosePosts = [];
+
+    allClosePosts.forEach((item) => {
+        if (item && item.attachments && item.attachments[0]
+            && item.attachments[0].type && item.attachments[0].type == 'video'
+            && item.attachments[1] && item.attachments[1].type 
+            && item.attachments[1].type == 'poll'
+            && item.attachments[1].poll && item.attachments[1].poll.id
+            && item.attachments[1].poll.answers[0].id
+            && item.attachments[1].poll.answers[1].id
+            && item.attachments[1].poll.answers[2].id
+            && item.attachments[1].poll.answers[3].id
+            && item.attachments[1].poll.answers[4].id) {
+
+            let answerIds = item.attachments[1].poll.answers[0].id + ',' + item.attachments[1].poll.answers[1].id + ','
+                item.attachments[1].poll.answers[2].id + ',' + item.attachments[1].poll.answers[3].id + ','
+                item.attachments[1].poll.answers[4].id;
+            averageClosePosts.push( getPollById(item) );
+        }
+    });
+
+    async function removeBlankRecords() {
+        let allClosePosts = await Promise.all(averageClosePosts);
+
+        return allClosePosts.filter((closePost) => {
+            return closePost;
+        });
+    }
+
+    return await removeBlankRecords();
 }
 
-async function updateVites () {
-
+async function updateVites() {
     console.log('\r\n updateVites step 1');
     let closePosts = await getClosePosts();
-    console.log('\r\n closePosts: ', closePosts);
+    // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updateVites step 2');
-    let averagePosts = await getAverageClosePosts(closePosts);
-    console.log('!!!! averagePosts: ', averagePosts);
+    let averageClosePosts = await getAverageClosePosts(closePosts);
+    console.log('\r\naverageClosePosts: ', averageClosePosts);
+
+    if (averageClosePosts && averageClosePosts[0] 
+        && averageClosePosts[0].poll && averageClosePosts[0].poll.response) {
+            console.log('\r\averageClosePosts[0].poll.response: ', averageClosePosts[0].poll.response);
+    }
 }
 
-
-updatePosts();
+// updatePosts();
 updateVites();
 
 // Реализовать запуск запросов голосования и ожидание всех ответов
