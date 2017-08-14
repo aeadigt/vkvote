@@ -36,7 +36,7 @@ vk.setToken(access_token);
 // ************************** Vk init **************************
 let openGroup = '-150899652';
 let closeGroup = '-150899833';
-
+let likeAdmin = '441461955';
 // ************************** Vk request **************************
 
 // ************************** Common Requests **************************
@@ -224,7 +224,6 @@ function getPollById(post) {
                     // console.log(data.response);
 
                     if (data.response.answers) {
-
                         let countVotes = 0;
                         let sum = 0;
 
@@ -253,8 +252,63 @@ function getPollById(post) {
     });
 };
 
-async function getAverageClosePosts(allClosePosts) {
+async function getAverageClosePosts(likedClosePosts) {
     let averageClosePosts = [];
+
+    likedClosePosts.forEach((item) => {
+        if (item && item.attachments && item.attachments[0]
+            && item.attachments[0].type && item.attachments[0].type == 'video'
+            && item.attachments[1] && item.attachments[1].type 
+            && item.attachments[1].type == 'poll'
+            && item.attachments[1].poll && item.attachments[1].poll.id
+            && item.attachments[1].poll.answers[0].id
+            && item.attachments[1].poll.answers[1].id
+            && item.attachments[1].poll.answers[2].id
+            && item.attachments[1].poll.answers[3].id
+            && item.attachments[1].poll.answers[4].id) {
+
+            // let answerIds = item.attachments[1].poll.answers[0].id + ',' + item.attachments[1].poll.answers[1].id + ','
+            //     item.attachments[1].poll.answers[2].id + ',' + item.attachments[1].poll.answers[3].id + ','
+            //     item.attachments[1].poll.answers[4].id;
+            averageClosePosts.push( getPollById(item) );
+        }
+    });
+
+    async function removeBlankRecords() {
+        let likeClosePosts = await Promise.all(averageClosePosts);
+
+        return likeClosePosts.filter((closePost) => {
+            return closePost;
+        });
+    }
+
+    return await removeBlankRecords();
+}
+
+// ************************** isLiked **************************
+function getLikedClosePost(post) {
+    return new Promise((resolve, reject) => {
+        vk.request('likes.isLiked', {
+                user_id: likeAdmin,
+                type: 'post',
+                owner_id: '-150899833',
+                item_id: post.id
+            }, (data) => {
+                if (!data) {
+                    return resolve(false);
+                }
+                if (data && data.response && data.response.liked) {
+                    return resolve(post);
+                } else {
+                    return resolve(false);
+                }
+            }
+        );
+    });
+};
+
+async function getLikedClosePosts(allClosePosts) {
+    let likedClosePosts = [];
 
     allClosePosts.forEach((item) => {
         if (item && item.attachments && item.attachments[0]
@@ -268,17 +322,14 @@ async function getAverageClosePosts(allClosePosts) {
             && item.attachments[1].poll.answers[3].id
             && item.attachments[1].poll.answers[4].id) {
 
-            let answerIds = item.attachments[1].poll.answers[0].id + ',' + item.attachments[1].poll.answers[1].id + ','
-                item.attachments[1].poll.answers[2].id + ',' + item.attachments[1].poll.answers[3].id + ','
-                item.attachments[1].poll.answers[4].id;
-            averageClosePosts.push( getPollById(item) );
+            likedClosePosts.push( getLikedClosePost(item) );
         }
     });
 
     async function removeBlankRecords() {
-        let allClosePosts = await Promise.all(averageClosePosts);
+        let closePosts = await Promise.all(likedClosePosts);
 
-        return allClosePosts.filter((closePost) => {
+        return closePosts.filter((closePost) => {
             return closePost;
         });
     }
@@ -292,13 +343,18 @@ async function updateVites() {
     // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updateVites step 2');
-    let averageClosePosts = await getAverageClosePosts(closePosts);
-    console.log('\r\naverageClosePosts: ', averageClosePosts);
+    let likedClosePosts = await getLikedClosePosts(closePosts);
+    // console.log('likedClosePosts: ', likedClosePosts);
 
-    if (averageClosePosts && averageClosePosts[0] 
-        && averageClosePosts[0].poll && averageClosePosts[0].poll.response) {
-            console.log('\r\averageClosePosts[0].poll.response: ', averageClosePosts[0].poll.response);
-    }
+    
+    console.log('\r\n updateVites step 3');
+    let averageClosePosts = await getAverageClosePosts(likedClosePosts);
+    console.log('\r\n averageClosePosts: ', averageClosePosts);
+
+    // if (averageClosePosts && averageClosePosts[0] 
+    //     && averageClosePosts[0].poll && averageClosePosts[0].poll.response) {
+    //         console.log('\r\averageClosePosts[0].poll.response: ', averageClosePosts[0].poll.response);
+    // }
 }
 
 // updatePosts();
