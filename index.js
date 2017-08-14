@@ -52,6 +52,7 @@ function startWorker() {
     worker.on('close', function(code) {
         console.log('Close worker code: ', code);
         isRunWorker = false;
+        clearTimeout(timer);
     });
 
     worker.on('message', function(msg) {
