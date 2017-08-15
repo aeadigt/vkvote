@@ -49,7 +49,7 @@ function getOpenPosts() {
                 'count': 100
             }, (data) => {
                 if (!data) {
-                    return;
+                    return resolve([]);
                 }
                 // console.log('wall.get: ', data);
 
@@ -66,6 +66,8 @@ function getOpenPosts() {
                         }
                     });
                     resolve(video);
+                } else {
+                    return resolve([]);
                 }
             }
         );
@@ -81,7 +83,7 @@ function getClosePosts(openVideo) {
                 'count': 100
             }, (data) => {
                 if (!data) {
-                    return;
+                    return resolve([]);
                 }
                 // console.log('wall.get: ', data);
 
@@ -105,6 +107,8 @@ function getClosePosts(openVideo) {
 }
 
 // ************************** Update posts **************************
+
+// ************************** Find new posts **************************
 function getNewPosts(openVideo, closeVideo) {
     return new Promise(function(resolve) {
         let video = [];
@@ -141,20 +145,21 @@ function isSomeVideo(openVideo, closeVideo) {
     return false;
 }
 
+// ************************** Send Posts **************************
 function sendAllNewVideo(video) {
     video.forEach((item) => {
         if (item && item.attachments && item.attachments[0] 
             && item.attachments[0].video.owner_id && item.attachments[0].video.id) {
 
             let video = 'video' + item.attachments[0].video.owner_id + '_' + item.attachments[0].video.id;
-            createPoll(video);
+            createPoll(video, item.id);
         }
     });
 };
 
-function createPoll(video) {
+function createPoll(video, idOpenPost) {
     vk.request('polls.create', { 
-            owner_id: '-150899833',
+            owner_id: closeGroup,
             add_answers: '["5", "4", "3", "2", "1"]',
             question: 'Ваша оценка за видео',
             access_token: access_token
@@ -167,17 +172,17 @@ function createPoll(video) {
 
             if (data && data.response && data.response.id && data.response.owner_id) {
                 let poll = 'poll' + data.response.owner_id + '_' + data.response.id;
-                sendNewVideo(video, poll);
+                sendNewVideo(video, poll, idOpenPost);
             }
     });
     
 }
 
-function sendNewVideo(video, poll) {
+function sendNewVideo(video, poll, idOpenPost) {
     // Отправляем видео
     vk.request('wall.post', { 
-            owner_id: '-150899833',
-            message: 'Новое видео',
+            owner_id: closeGroup,
+            message: idOpenPost,
             attachments: video + ',' + poll,
             access_token: access_token,
             from_group: 1
@@ -211,7 +216,7 @@ async function updatePosts () {
 function getPollById(post) {
     return new Promise((resolve, reject) => {
         vk.request('polls.getById', {
-                owner_id: '-150899833',
+                owner_id: closeGroup,
                 poll_id: post.attachments[1].poll.id,
                 is_board: 0
             }, (data) => {
@@ -267,9 +272,6 @@ async function getAverageClosePosts(likedClosePosts) {
             && item.attachments[1].poll.answers[3].id
             && item.attachments[1].poll.answers[4].id) {
 
-            // let answerIds = item.attachments[1].poll.answers[0].id + ',' + item.attachments[1].poll.answers[1].id + ','
-            //     item.attachments[1].poll.answers[2].id + ',' + item.attachments[1].poll.answers[3].id + ','
-            //     item.attachments[1].poll.answers[4].id;
             averageClosePosts.push( getPollById(item) );
         }
     });
@@ -291,7 +293,7 @@ function getLikedClosePost(post) {
         vk.request('likes.isLiked', {
                 user_id: likeAdmin,
                 type: 'post',
-                owner_id: '-150899833',
+                owner_id: closeGroup,
                 item_id: post.id
             }, (data) => {
                 if (!data) {
@@ -337,6 +339,66 @@ async function getLikedClosePosts(allClosePosts) {
     return await removeBlankRecords();
 }
 
+// ************************** getComments **************************
+function getCommentsById(idPost, offset) {
+    offset = offset || 0;
+
+    return new Promise((resolve) => {
+        vk.request('wall.getComments', { 
+                owner_id: idPost.owner_id,
+                post_id: idPost.post_id,
+                count: 100,
+                sort: 'asc',
+                offset: offset
+            }, (data) => {
+                if (!data) {
+                    return resolve(false);
+                }
+
+                data.owner_id = idPost.owner_id;
+                data.post_id = idPost.post_id;
+
+                return resolve(data);
+            }
+        );
+    });
+}
+
+async function getAllCommentsPosts(idPosts) {
+    // console.log('\r\n getCommentsById: ', idPosts);
+
+    let comments = [];
+
+    idPosts.forEach((item) => {
+        comments.push( getCommentsById(item) );
+    });
+
+    async function removeBlankRecords() {
+        let allComments = await Promise.all(comments);
+
+        allComments.push(false);
+
+        return allComments.filter((comment) => {
+            return comment;
+        });
+    }
+
+    return await removeBlankRecords();
+}
+
+// ************************** getOpenIdPosts **************************
+function getIdOpenPosts(posts) {
+    let idPosts = [];
+
+    posts.forEach((item) => {
+        let id = { owner_id: openGroup, post_id: item.text };
+        idPosts.push(id);
+    });
+    return idPosts;
+}
+
+
+// ************************** updateVites **************************
 async function updateVites() {
     console.log('\r\n updateVites step 1');
     let closePosts = await getClosePosts();
@@ -346,18 +408,70 @@ async function updateVites() {
     let likedClosePosts = await getLikedClosePosts(closePosts);
     // console.log('likedClosePosts: ', likedClosePosts);
 
-    
     console.log('\r\n updateVites step 3');
     let averageClosePosts = await getAverageClosePosts(likedClosePosts);
-    console.log('\r\n averageClosePosts: ', averageClosePosts);
+    // console.log('\r\n averageClosePosts: ', averageClosePosts);
 
-    // if (averageClosePosts && averageClosePosts[0] 
-    //     && averageClosePosts[0].poll && averageClosePosts[0].poll.response) {
-    //         console.log('\r\averageClosePosts[0].poll.response: ', averageClosePosts[0].poll.response);
-    // }
+    let openIdPosts = getIdOpenPosts(averageClosePosts);
+    // console.log('\r\n openIdPosts: ', openIdPosts);
+
+    let allCommentsPosts = await getAllCommentsPosts(openIdPosts);
+    // console.log('\r\n allCommentsPosts: ', allCommentsPosts);
+
+    // allCommentsPosts.forEach((item) => {
+    //     item.response.items.forEach((comment, i) => {
+    //         console.log('\r\n comment: ', comment, '\r\n owner_id: ', item.owner_id, '\r\n post_id: ', item.post_id);
+    //         if ( comment.from_id == closeGroup 
+    //             && comment.text.indexOf('Ваша оценка:') ) {
+
+    //         }
+    //     });
+    // });
+
 }
 
 // updatePosts();
 updateVites();
 
-// Реализовать запуск запросов голосования и ожидание всех ответов
+
+
+
+
+
+
+
+
+
+/*
+function getOpenPostsById(idPosts) {
+    console.log('getOpenPostsById: ', idPosts);
+
+    return new Promise(function(resolve) {
+        vk.request('wall.getById', { 
+                posts: idPosts
+            }, (data) => {
+                if (!data) {
+                    return resolve(false);
+                }
+                console.log('! wall.getById: ', data);
+            }
+        );
+    });
+}
+*/
+
+/*
+function getIdOpenPosts(posts) {
+    let idPosts = '';
+
+    posts.forEach((item) => {
+        let id = openGroup + '_' + item.text;
+
+        if (idPosts) {
+            id = ',' + id;
+        }
+        idPosts += id;
+    });
+    return idPosts;
+}
+*/
