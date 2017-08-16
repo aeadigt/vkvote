@@ -403,6 +403,26 @@ function getIdOpenPosts(posts) {
     return idPosts;
 }
 
+// ************************** setVotes **************************
+function setVotes(openIdPosts) {
+    openIdPosts.forEach((item, i) => {
+        // console.log('!!! item: ', item);
+
+        vk.request('wall.createComment', {
+            owner_id: openGroup,
+            post_id: item.post_id,
+            from_group: 150899652,
+            message: 'Ваша оценка: ' + openIdPosts[i].average,
+            guid: item.post_id + '_' + openIdPosts[i].average
+        }, (data) => {
+            if (!data) {
+                return false;
+            }
+            console.log('wall.createComment data: ', data);
+            return true;
+        });
+    });
+}
 
 // ************************** updateVites **************************
 async function updateVites() {
@@ -421,23 +441,7 @@ async function updateVites() {
     let openIdPosts = getIdOpenPosts(averageClosePosts);
     console.log('\r\n openIdPosts: ', openIdPosts);
 
-    openIdPosts.forEach((item, i) => {
-        // console.log('!!! item: ', item);
-
-        vk.request('wall.createComment', {
-            owner_id: openGroup,
-            post_id: item.post_id,
-            from_group: 150899652,
-            message: 'Ваша оценка: ' + openIdPosts[i].average,
-            guid: item.post_id + '_' + openIdPosts[i].average
-        }, (data) => {
-            if (!data) {
-                return false;
-            }
-            console.log('wall.createComment data: ', data);
-            return true;
-        });
-    })
+    setVotes(openIdPosts);
 }
 
 updateVites();
