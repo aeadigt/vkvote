@@ -195,18 +195,18 @@ function sendNewVideo(video, poll, idOpenPost) {
     );
 }
 
-async function updatePosts () {
+async function updatePosts() {
     console.log('updatePosts step 1');
     let openPosts = await getOpenPosts();
-    console.log('\r\n openPosts: ', openPosts);
+    // console.log('\r\n openPosts: ', openPosts);
 
     console.log('\r\n updatePosts step 2');
     let closePosts = await getClosePosts();
-    console.log('\r\n closePosts: ', closePosts);
+    // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updatePosts step 3');
     let newPosts = await getNewPosts(openPosts, closePosts);
-    console.log('\r\n newPosts: ', newPosts);
+    // console.log('\r\n newPosts: ', newPosts);
 
     console.log('\r\n updatePosts step 4');
     sendAllNewVideo(newPosts);
@@ -357,6 +357,8 @@ function getCommentsById(idPost, offset) {
 
                 data.owner_id = idPost.owner_id;
                 data.post_id = idPost.post_id;
+                data.average = idPost.average;
+                // console.log('idPost: ', idPost);
 
                 return resolve(data);
             }
@@ -364,7 +366,7 @@ function getCommentsById(idPost, offset) {
     });
 }
 
-async function getAllCommentsPosts(idPosts) {
+async function getCommentsPosts(idPosts) {
     // console.log('\r\n getCommentsById: ', idPosts);
 
     let comments = [];
@@ -391,7 +393,11 @@ function getIdOpenPosts(posts) {
     let idPosts = [];
 
     posts.forEach((item) => {
-        let id = { owner_id: openGroup, post_id: item.text };
+        let id = { 
+            owner_id: openGroup, 
+            post_id: item.text, 
+            average: item.poll.response.average
+        };
         idPosts.push(id);
     });
     return idPosts;
@@ -413,26 +419,32 @@ async function updateVites() {
     // console.log('\r\n averageClosePosts: ', averageClosePosts);
 
     let openIdPosts = getIdOpenPosts(averageClosePosts);
-    // console.log('\r\n openIdPosts: ', openIdPosts);
+    console.log('\r\n openIdPosts: ', openIdPosts);
 
-    let allCommentsPosts = await getAllCommentsPosts(openIdPosts);
-    // console.log('\r\n allCommentsPosts: ', allCommentsPosts);
+    openIdPosts.forEach((item, i) => {
+        // console.log('!!! item: ', item);
 
-    // allCommentsPosts.forEach((item) => {
-    //     item.response.items.forEach((comment, i) => {
-    //         console.log('\r\n comment: ', comment, '\r\n owner_id: ', item.owner_id, '\r\n post_id: ', item.post_id);
-    //         if ( comment.from_id == closeGroup 
-    //             && comment.text.indexOf('Ваша оценка:') ) {
-
-    //         }
-    //     });
-    // });
-
+        vk.request('wall.createComment', {
+            owner_id: openGroup,
+            post_id: item.post_id,
+            from_group: 150899652,
+            message: 'Ваша оценка: ' + openIdPosts[i].average,
+            guid: item.post_id + '_' + openIdPosts[i].average
+        }, (data) => {
+            if (!data) {
+                return false;
+            }
+            console.log('wall.createComment data: ', data);
+            return true;
+        });
+    })
 }
 
-// updatePosts();
 updateVites();
 
+setTimeout(() => {
+    updatePosts();
+}, 10000);
 
 
 
@@ -441,8 +453,53 @@ updateVites();
 
 
 
+
+// ******************************** Other ********************************
 
 /*
+
+// let allCommentsPosts = await getCommentsPosts(openIdPosts);
+
+allCommentsPosts.some((item) => {
+    item.response.items.forEach((comment, i) => {
+        // console.log('\r\n comment: ', comment, '\r\n owner_id: ', item.owner_id, '\r\n post_id: ', item.post_id, '\r\n length: ', item.response.items.length);
+
+        if ( comment.from_id == closeGroup 
+            && comment.text.indexOf('Ваша оценка:') ) {
+            return false;
+        }
+
+        if (item.response.items.length < 100) {
+            return false;
+        }
+
+        return true;
+    });
+});
+
+
+allCommentsPosts.forEach((item, i) => {
+    // item.response.items.forEach((comment) => {
+        vk.request('wall.createComment', {
+            owner_id: openGroup,
+            post_id: item.post_id,
+            from_group: 150899833,
+            message: 'Ваша оценка: ' + allCommentsPosts[i].average,
+            guid: 'Ваша оценка: '
+        }, (data) => {
+            if (!data) {
+                return resolve(false);
+            }
+            console.log(data);
+        });
+
+        // сделать комментарий от имени группы
+        // closeGroup
+
+    // });
+});
+
+
 function getOpenPostsById(idPosts) {
     console.log('getOpenPostsById: ', idPosts);
 
