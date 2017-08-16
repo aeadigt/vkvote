@@ -74,13 +74,15 @@ function getOpenPosts() {
     });
 }
 
-function getClosePosts(openVideo) {
+function getClosePosts(offset) {
+    offset = offset || 0;
     return new Promise(function(resolve) {
         vk.request('wall.get', { 
                 owner_id: closeGroup,
                 extended: 0,
                 filter: 'all',
-                'count': 100
+                'count': 100,
+                offset: offset
             }, (data) => {
                 if (!data) {
                     return resolve([]);
@@ -425,9 +427,13 @@ function setVotes(openIdPosts) {
 }
 
 // ************************** updateVites **************************
-async function updateVites() {
+async function updateVites(offset) {
+    offset = offset || 0;
+
+    console.log('\r\n updateVites step 0 offset: ', offset);
+
     console.log('\r\n updateVites step 1');
-    let closePosts = await getClosePosts();
+    let closePosts = await getClosePosts(offset);
     // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updateVites step 2');
@@ -444,11 +450,15 @@ async function updateVites() {
     setVotes(openIdPosts);
 }
 
-updateVites();
+async function updateAllData() {
+    for (let i = 0; i < 2000; i += 90) {
+        console.log('i = ', i);
+        await updateVites(i);
+    }
+    await updatePosts();
+}
 
-setTimeout(() => {
-    updatePosts();
-}, 10000);
+updateAllData();
 
 
 
