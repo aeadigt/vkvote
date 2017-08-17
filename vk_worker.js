@@ -37,6 +37,7 @@ vk.setToken(access_token);
 let openGroup = '-150899652';
 let closeGroup = '-150899833';
 let likeAdmin = '441461955';
+let members = [];
 // ************************** Vk request **************************
 
 // ************************** Common Requests **************************
@@ -108,6 +109,26 @@ function getClosePosts(offset) {
     });
 }
 
+// ******************************** getMembers ********************************
+function getMembers(post) {
+    return new Promise((resolve, reject) => {
+        vk.request('groups.getMembers', {
+                group_id: 150899833
+            }, (data) => {
+                if (!data) {
+                    return resolve([]);
+                }
+
+                if (data && data.response && data.response.items) {
+                    return resolve(data.response.items);
+                }
+
+                return [];
+            }
+        );
+    });
+};
+
 // ************************** Update posts **************************
 
 // ************************** Find new posts **************************
@@ -177,8 +198,9 @@ function createPoll(video, idOpenPost) {
                 sendNewVideo(video, poll, idOpenPost);
             }
     });
-    
 }
+
+
 
 function sendNewVideo(video, poll, idOpenPost) {
     // Отправляем видео
@@ -192,10 +214,44 @@ function sendNewVideo(video, poll, idOpenPost) {
             if (!data) {
                 return;
             }
+
             console.log('\r\n wall.post: ', data);
+
+            if (data && data.response 
+                && data.response.post_id) {
+                alertPeoples(data.response.post_id);
+            }
         }
     );
 }
+
+function alertPeoples(postId) {
+    if (!postId) {
+        return false;
+    }
+
+    console.log('\r\n alertPeoples postId: ', postId, ' members: ', members);
+
+    members.forEach((member) => {
+        if (member) {
+            vk.request('messages.send', {
+                user_id: member,
+                attachment: 'wall' + closeGroup + '_' + postId
+            }, (data) => {
+                if (!data) {
+                    return false;
+                }
+                console.log('alertPeoples data: ', data);
+                return true;
+            });
+        }
+    });
+
+
+}
+
+
+// ************************** update Posts **************************
 
 async function updatePosts() {
     console.log('updatePosts step 1');
@@ -342,25 +398,21 @@ async function getLikedClosePosts(allClosePosts) {
 }
 
 // ************************** getComments **************************
-function getCommentsById(idPost, offset) {
-    offset = offset || 0;
-
+function getCommentsById(idPost) {
     return new Promise((resolve) => {
         vk.request('wall.getComments', { 
                 owner_id: idPost.owner_id,
                 post_id: idPost.post_id,
-                count: 100,
-                sort: 'asc',
-                offset: offset
+                count: 1000,
+                sort: 'desc'
             }, (data) => {
-                if (!data) {
+                if (!data && !postData) {
                     return resolve(false);
                 }
 
                 data.owner_id = idPost.owner_id;
                 data.post_id = idPost.post_id;
                 data.average = idPost.average;
-                // console.log('idPost: ', idPost);
 
                 return resolve(data);
             }
@@ -370,7 +422,6 @@ function getCommentsById(idPost, offset) {
 
 async function getCommentsPosts(idPosts) {
     // console.log('\r\n getCommentsById: ', idPosts);
-
     let comments = [];
 
     idPosts.forEach((item) => {
@@ -447,26 +498,54 @@ async function updateVites(offset) {
     let openIdPosts = getIdOpenPosts(averageClosePosts);
     console.log('\r\n openIdPosts: ', openIdPosts);
 
-    setVotes(openIdPosts);
+    let allCommentsPosts = await getCommentsPosts(openIdPosts);
+    console.log('\r\n all allCommentsPosts: ', allCommentsPosts);
+
+    allCommentsPosts = allCommentsPosts.filter((item) => {
+        item.response.items = item.response.items.filter((comment, i) => {
+            console.log('\r\n ', item.post_id, ' \r\n comment: ', comment,
+                '\r\n owner_id: ', item.owner_id, 
+                '\r\n post_id: ', item.post_id, 
+                '\r\n offset: ', item.offset, 
+                '\r\n length: ', item.response.items.length);
+
+            if ( comment.from_id == openGroup 
+                && comment.text.indexOf('Ваша оценка:') + 1 ) {
+                console.log(item.post_id, ' Есть комментарий [Ваша оценка:]. Оставляем для флага.');
+                return true;
+            }
+
+            console.log(item.post_id, ' Нет комментария [Ваша оценка:]. Удалим элемент в фильтре.');
+            return false;
+        });
+
+        if (item.response.items.length) {
+            console.log(item.post_id, ' Есть комментарии [Ваша оценка:] Удаляем запись ', item.response.items.length);
+            return false;
+        } else {
+            console.log(item.post_id, ' Нет комментария [Ваша оценка:]. Сохраняем запись.');
+            return true;
+        }
+    });
+
+    console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
+
+    setVotes(allCommentsPosts);
 }
 
 async function updateAllData() {
-    for (let i = 0; i < 2000; i += 90) {
+    members = await getMembers();
+
+    console.log('members: ', members);
+
+    for (let i = 0; i < 2000; i += 100) {
         console.log('i = ', i);
         await updateVites(i);
     }
-    await updatePosts();
+    // await updatePosts();
 }
 
 updateAllData();
-
-
-
-
-
-
-
-
 
 // ******************************** Other ********************************
 
@@ -529,9 +608,8 @@ function getOpenPostsById(idPosts) {
         );
     });
 }
-*/
 
-/*
+
 function getIdOpenPosts(posts) {
     let idPosts = '';
 

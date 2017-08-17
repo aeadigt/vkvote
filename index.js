@@ -7,7 +7,7 @@ process.on('uncaughtException', (e) => {
     console.error('uncaughtException', e);
 });
 
-let time = 86400000;
+let time = 86400000/4;
 // let time = 10000;
 
 setInterval(() => {
