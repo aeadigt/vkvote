@@ -578,6 +578,9 @@ async function updateVites(offset) {
 
     await delay();
 
+    console.log('\r\n getRelevantComments: ');
+    process.send('\r\n all getRelevantComments: ');
+
     allCommentsPosts = getRelevantComments();
 
     console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
@@ -593,6 +596,7 @@ async function updateAllData() {
 
     for (let i = 0; i < 2000; i += 100) {
         console.log('i = ', i);
+        process.send('start updateVites ' + i);
         await updateVites(i);
         await delay();
     }
