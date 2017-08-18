@@ -255,18 +255,23 @@ function alertPeoples(postId) {
 
 async function updatePosts() {
     console.log('updatePosts step 1');
+    process.send('updatePosts step 1');
+
     let openPosts = await getOpenPosts();
     // console.log('\r\n openPosts: ', openPosts);
 
     console.log('\r\n updatePosts step 2');
+    process.send('updatePosts step 2');
     let closePosts = await getClosePosts();
     // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updatePosts step 3');
+    process.send('updatePosts step 3');
     let newPosts = await getNewPosts(openPosts, closePosts);
     // console.log('\r\n newPosts: ', newPosts);
 
     console.log('\r\n updatePosts step 4');
+    process.send('updatePosts step 4');
     sendAllNewVideo(newPosts);
 }
 
@@ -482,24 +487,30 @@ async function updateVites(offset) {
     offset = offset || 0;
 
     console.log('\r\n updateVites step 0 offset: ', offset);
+    process.send('updateVites step 0 offset:');
 
     console.log('\r\n updateVites step 1');
+    process.send('updateVites step 1');
     let closePosts = await getClosePosts(offset);
     // console.log('\r\n closePosts: ', closePosts);
 
     console.log('\r\n updateVites step 2');
+    process.send('updateVites step 2');
     let likedClosePosts = await getLikedClosePosts(closePosts);
     // console.log('likedClosePosts: ', likedClosePosts);
 
     console.log('\r\n updateVites step 3');
+    process.send('updateVites step 3');
     let averageClosePosts = await getAverageClosePosts(likedClosePosts);
     // console.log('\r\n averageClosePosts: ', averageClosePosts);
 
     let openIdPosts = getIdOpenPosts(averageClosePosts);
     console.log('\r\n openIdPosts: ', openIdPosts);
+    process.send('openIdPosts: ' + openIdPosts);
 
     let allCommentsPosts = await getCommentsPosts(openIdPosts);
     console.log('\r\n all allCommentsPosts: ', allCommentsPosts);
+    process.send('\r\n all allCommentsPosts: ' + allCommentsPosts);
 
     allCommentsPosts = allCommentsPosts.filter((item) => {
         item.response.items = item.response.items.filter((comment, i) => {
@@ -529,6 +540,7 @@ async function updateVites(offset) {
     });
 
     console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
+    process.send('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
 
     setVotes(allCommentsPosts);
 }
@@ -542,7 +554,10 @@ async function updateAllData() {
         console.log('i = ', i);
         await updateVites(i);
     }
+    process.send('!!!! END SUCCESS updateVites');
+
     await updatePosts();
+    process.send('!!!! END SUCCESS updatePosts');
 }
 
 updateAllData();
