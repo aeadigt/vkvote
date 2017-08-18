@@ -542,7 +542,7 @@ async function updateAllData() {
         console.log('i = ', i);
         await updateVites(i);
     }
-    // await updatePosts();
+    await updatePosts();
 }
 
 updateAllData();
