@@ -558,6 +558,17 @@ async function updateAllData() {
 
     await updatePosts();
     process.send('!!!! END SUCCESS updatePosts');
+
+    process.send('!!!! Start Timer kill process 5 мин.');
+
+    setTimeout(() => {
+        process.send('!!!! Kill Process !!!!!');
+
+        process.nextTick(() => {
+            process.exit();
+        });
+    }, 60000 * 5);
+
 }
 
 updateAllData();
