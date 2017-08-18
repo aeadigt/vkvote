@@ -64,12 +64,12 @@ function startWorker() {
     timer = setTimeout(() => {
         clearTimeout(timer);
 
-        console.log('Worker Timer 30 min');
+        console.log('Worker Timer 60 min');
 
         if (worker) {
             worker.kill();
         }
-    }, 1800000);
+    }, 3600000);
 }
 
 startWorker();

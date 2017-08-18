@@ -4,7 +4,11 @@
 process.on('uncaughtException', (err) => {
     console.error('uncaughtException', err);
     process.send('uncaughtException err: ' + err);
-    process.exit('uncaughtException err: ' + err);
+
+    process.nextTick(() => {
+        process.exit('uncaughtException err: ' + err);
+    });
+    
 });
 
 // ************************** Vk keys **************************
@@ -114,7 +118,7 @@ function delay() {
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve();
-        }, 5000);
+        }, 2000);
     });
 };
 
@@ -581,7 +585,7 @@ async function updateVites(offset) {
     console.log('\r\n getRelevantComments: ');
     process.send('\r\n all getRelevantComments: ');
 
-    allCommentsPosts = getRelevantComments();
+    allCommentsPosts = getRelevantComments(allCommentsPosts);
 
     console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
     process.send('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
