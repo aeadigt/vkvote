@@ -109,6 +109,15 @@ function getClosePosts(offset) {
     });
 }
 
+// ******************************** delay ********************************
+function delay() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, 5000);
+    });
+};
+
 // ******************************** getMembers ********************************
 function getMembers(post) {
     return new Promise((resolve, reject) => {
@@ -260,15 +269,21 @@ async function updatePosts() {
     let openPosts = await getOpenPosts();
     // console.log('\r\n openPosts: ', openPosts);
 
+    await delay();
+
     console.log('\r\n updatePosts step 2');
     process.send('updatePosts step 2');
     let closePosts = await getClosePosts();
     // console.log('\r\n closePosts: ', closePosts);
 
+    await delay();
+
     console.log('\r\n updatePosts step 3');
     process.send('updatePosts step 3');
     let newPosts = await getNewPosts(openPosts, closePosts);
     // console.log('\r\n newPosts: ', newPosts);
+
+    await delay();
 
     console.log('\r\n updatePosts step 4');
     process.send('updatePosts step 4');
@@ -482,37 +497,9 @@ function setVotes(openIdPosts) {
     });
 }
 
-// ************************** updateVites **************************
-async function updateVites(offset) {
-    offset = offset || 0;
-
-    console.log('\r\n updateVites step 0 offset: ', offset);
-    process.send('updateVites step 0 offset:');
-
-    console.log('\r\n updateVites step 1');
-    process.send('updateVites step 1');
-    let closePosts = await getClosePosts(offset);
-    // console.log('\r\n closePosts: ', closePosts);
-
-    console.log('\r\n updateVites step 2');
-    process.send('updateVites step 2');
-    let likedClosePosts = await getLikedClosePosts(closePosts);
-    // console.log('likedClosePosts: ', likedClosePosts);
-
-    console.log('\r\n updateVites step 3');
-    process.send('updateVites step 3');
-    let averageClosePosts = await getAverageClosePosts(likedClosePosts);
-    // console.log('\r\n averageClosePosts: ', averageClosePosts);
-
-    let openIdPosts = getIdOpenPosts(averageClosePosts);
-    console.log('\r\n openIdPosts: ', openIdPosts);
-    process.send('openIdPosts: ' + openIdPosts);
-
-    let allCommentsPosts = await getCommentsPosts(openIdPosts);
-    console.log('\r\n all allCommentsPosts: ', allCommentsPosts);
-    process.send('\r\n all allCommentsPosts: ' + allCommentsPosts);
-
-    allCommentsPosts = allCommentsPosts.filter((item) => {
+// ************************** getRelevantComments **************************
+function getRelevantComments(allCommentsPosts) {
+    return allCommentsPosts.filter((item) => {
         item.response.items = item.response.items.filter((comment, i) => {
             console.log('\r\n ', item.post_id, ' \r\n comment: ', comment,
                 '\r\n owner_id: ', item.owner_id, 
@@ -538,6 +525,60 @@ async function updateVites(offset) {
             return true;
         }
     });
+}
+
+// ************************** startTimerProcessExit **************************
+function startTimerProcessExit() {
+    process.send('!!!! Start Timer kill process 5 мин.');
+
+    setTimeout(() => {
+        process.send('!!!! Kill Process !!!!!');
+
+        process.nextTick(() => {
+            process.exit();
+        });
+    }, 60000 * 5);
+}
+
+// ************************** updateVites **************************
+async function updateVites(offset) {
+    offset = offset || 0;
+
+    console.log('\r\n updateVites step 0 offset: ', offset);
+    process.send('updateVites step 0 offset:');
+
+    console.log('\r\n updateVites step 1');
+    process.send('updateVites step 1');
+    let closePosts = await getClosePosts(offset);
+    // console.log('\r\n closePosts: ', closePosts);
+
+    await delay();
+    
+    console.log('\r\n updateVites step 2');
+    process.send('updateVites step 2');
+    let likedClosePosts = await getLikedClosePosts(closePosts);
+    // console.log('likedClosePosts: ', likedClosePosts);
+
+    await delay();
+
+    console.log('\r\n updateVites step 3');
+    process.send('updateVites step 3');
+    let averageClosePosts = await getAverageClosePosts(likedClosePosts);
+    // console.log('\r\n averageClosePosts: ', averageClosePosts);
+
+    await delay();
+
+    let openIdPosts = getIdOpenPosts(averageClosePosts);
+    console.log('\r\n openIdPosts: ', openIdPosts);
+    process.send('openIdPosts: ' + openIdPosts);
+
+    let allCommentsPosts = await getCommentsPosts(openIdPosts);
+    console.log('\r\n all allCommentsPosts: ', allCommentsPosts);
+    process.send('\r\n all allCommentsPosts: ' + allCommentsPosts);
+
+    await delay();
+
+    allCommentsPosts = getRelevantComments();
 
     console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
     process.send('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
@@ -553,22 +594,14 @@ async function updateAllData() {
     for (let i = 0; i < 2000; i += 100) {
         console.log('i = ', i);
         await updateVites(i);
+        await delay();
     }
     process.send('!!!! END SUCCESS updateVites');
 
     await updatePosts();
     process.send('!!!! END SUCCESS updatePosts');
 
-    process.send('!!!! Start Timer kill process 5 мин.');
-
-    setTimeout(() => {
-        process.send('!!!! Kill Process !!!!!');
-
-        process.nextTick(() => {
-            process.exit();
-        });
-    }, 60000 * 5);
-
+    startTimerProcessExit();
 }
 
 updateAllData();
