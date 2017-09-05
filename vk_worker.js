@@ -50,7 +50,7 @@ function getOpenPosts() {
         vk.request('wall.get', { 
                 owner_id: openGroup,
                 extended: 0,
-                filter: 'others',
+                // filter: 'others',
                 'count': 100
             }, (data) => {
                 if (!data) {
