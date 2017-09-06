@@ -34,7 +34,7 @@ vk.on('serverTokenReady', (data) => {
 vk.setSecureRequests(true);
 
 // First you have to pass access_token from client side JS code
-var access_token = 'b0cf28ffec9528880f3c03aebe93c54655d0cf6acb61dda4873073306df5d16d845e60396588f999d4363';
+var access_token = 'e045135299cd71cd89412faa7a10d305b117c03544b7d8ff48a308e8b315035dfd6fcf9e9c8107bc11941';
 vk.setToken(access_token);
 
 // ************************** Vk init **************************
