@@ -1,10 +1,16 @@
 'use strict';
 
+function debug(msg) {
+    console.log(msg);
+
+    if ('send' in process) {
+        process.send(msg);
+    }
+}
+
 // ************************** uncaughtException **************************
 process.on('uncaughtException', (err) => {
-    console.error('uncaughtException', err.stack);
-    // process.send('uncaughtException pid:' + process.pid + ': stack: ' + err.stack);
-    process.send('uncaughtException err: ' + err);
+    debug('uncaughtException ' +  err.stack);
 
     process.nextTick(() => {
         process.exit('uncaughtException err: ' + err.stack);
@@ -57,7 +63,6 @@ function getOpenPosts() {
                 if (!data) {
                     return resolve([]);
                 }
-                // console.log('wall.get: ', data);
 
                 if (data && data.response && data.response.items
                     && Array.isArray(data.response.items) ) {
@@ -66,8 +71,7 @@ function getOpenPosts() {
                     data.response.items.forEach((item) => {
                         if (item && item.attachments && item.attachments[0]
                             && item.attachments[0].type && item.attachments[0].type == 'video') {
-                            // console.log('\r\n Open item: ', item);
-                            // console.log('\r\n Open item.attachments[0]: ', item.attachments[0]);
+                            // debug('\r\n Open item.attachments[0]: ' + item.attachments[0]);
                             video.push(item);
                         }
                     });
@@ -93,7 +97,6 @@ function getClosePosts(offset) {
                 if (!data) {
                     return resolve([]);
                 }
-                // console.log('wall.get: ', data);
 
                 let video = [];
 
@@ -203,8 +206,7 @@ function createPoll(video, idOpenPost) {
             if (!data) {
                 return;
             }
-            // console.log('\r\n polls.create: ', data);
-            // console.log('\r\n polls.create data.response.id: ', data.response.id);
+            // debug('\r\n polls.create: ' + data);
 
             if (data && data.response && data.response.id && data.response.owner_id) {
                 let poll = 'poll' + data.response.owner_id + '_' + data.response.id;
@@ -228,7 +230,7 @@ function sendNewVideo(video, poll, idOpenPost) {
                 return;
             }
 
-            console.log('\r\n wall.post: ', data);
+            debug('\r\n wall.post: ' + data);
 
             if (data && data.response 
                 && data.response.post_id) {
@@ -243,7 +245,7 @@ function alertPeoples(postId) {
         return false;
     }
 
-    console.log('\r\n alertPeoples postId: ', postId, ' members: ', members);
+    debug('\r\n alertPeoples postId: ' + postId + ' members: ' + members);
 
     members.forEach((member) => {
         if (member) {
@@ -254,7 +256,7 @@ function alertPeoples(postId) {
                 if (!data) {
                     return false;
                 }
-                console.log('alertPeoples data: ', data);
+                debug('alertPeoples data: ' + data);
                 return true;
             });
         }
@@ -266,35 +268,34 @@ function alertPeoples(postId) {
 
 // ************************** update Posts **************************
 async function updatePosts(closePosts) {
-    console.log('updatePosts step 1');
-    // process.send('updatePosts step 1');
+    debug('updatePosts step 1');
 
     let openPosts = await getOpenPosts();
-    // console.log('\r\n openPosts: ', openPosts);
+    // debug('\r\n openPosts: ', openPosts);
 
     await delay();
 
-    console.log('\r\n updatePosts step 2');
-    // process.send('updatePosts step 2');
+    debug('\r\n updatePosts step 2');
+    // debug('updatePosts step 2');
     let lastClosePosts = await getClosePosts();
     if (lastClosePosts) {
         closePosts = closePosts.concat(lastClosePosts);
     } else {
         process.exit('lastClosePosts == []');
     }
-    // console.log('\r\n closePosts: ', closePosts);
+    // debug('\r\n closePosts: ' + closePosts);
 
     await delay();
 
-    console.log('\r\n updatePosts step 3');
-    // process.send('updatePosts step 3');
+    debug('\r\n updatePosts step 3');
+    // debug('updatePosts step 3');
     let newPosts = await getNewPosts(openPosts, closePosts);
-    // console.log('\r\n newPosts: ', newPosts);
+    // debug('\r\n newPosts: ' + newPosts);
 
     await delay();
 
-    console.log('\r\n updatePosts step 4');
-    // process.send('updatePosts step 4');
+    debug('\r\n updatePosts step 4');
+    // debug('updatePosts step 4');
     sendAllNewVideo(newPosts);
 }
 
@@ -312,7 +313,7 @@ function getPollById(post) {
 
                 if (data && data.response 
                     && data.response.votes && data.response.votes >= 1) {
-                    // console.log(data.response);
+                    // debug(data.response);
 
                     if (data.response.answers) {
                         let countVotes = 0;
@@ -449,7 +450,7 @@ function getCommentsById(idPost) {
 }
 
 async function getCommentsPosts(idPosts) {
-    // console.log('\r\n getCommentsById: ', idPosts);
+    // debug('\r\n getCommentsById: ' + idPosts);
     let comments = [];
 
     idPosts.forEach((item) => {
@@ -458,6 +459,8 @@ async function getCommentsPosts(idPosts) {
 
     async function removeBlankRecords() {
         let allComments = await Promise.all(comments);
+
+        return allComments;
 
         // allComments.push(false);
 
@@ -488,14 +491,10 @@ function getIdOpenPosts(posts) {
 
 // ************************** setVotes **************************
 function setVotes(openIdPosts) {
-    console.log('setVotes');
-    console.log('*****************************************');
-    console.log('openIdPosts: ', openIdPosts);
+    debug('setVotes openIdPosts: ' + openIdPosts);
     
     if (openIdPosts) {
         openIdPosts.forEach((item, i) => {
-            // console.log('!!! item: ', item);
-
             vk.request('wall.createComment', {
                 owner_id: openGroup,
                 post_id: item.post_id,
@@ -506,7 +505,7 @@ function setVotes(openIdPosts) {
                 if (!data) {
                     return false;
                 }
-                console.log('wall.createComment data: ', data);
+                debug('wall.createComment data: ' + data);
                 return true;
             });
         });
@@ -530,29 +529,29 @@ function getRelevantComments(allCommentsPosts) {
 
                 if (item && item.post_id && comment && item.owner_id
                     && item.offset && item.response && item.response.items && item.response.items.length) {
-                    console.log('\r\n ', item.post_id, ' \r\n comment: ', comment,
-                        '\r\n owner_id: ', item.owner_id, 
-                        '\r\n post_id: ', item.post_id, 
-                        '\r\n offset: ', item.offset, 
-                        '\r\n length: ', item.response.items.length);
+                    debug('\r\n ' + item.post_id + ' \r\n comment: ' + comment +
+                        '\r\n owner_id: ' + item.owner_id + 
+                        '\r\n post_id: ' + item.post_id + 
+                        '\r\n offset: ' + item.offset + 
+                        '\r\n length: ' + item.response.items.length);
                 }
 
                 if ( comment.from_id == openGroup 
                     && comment.text.indexOf('Ваша оценка:') + 1 ) {
-                    // console.log(item.post_id, ' Есть комментарий [Ваша оценка:]. Оставляем для флага.');
+                    // debug(item.post_id + ' Есть комментарий [Ваша оценка:]. Оставляем для флага.');
                     return true;
                 }
 
-                // console.log(item.post_id, ' Нет комментария [Ваша оценка:]. Удалим элемент в фильтре.');
+                // debug(item.post_id + ' Нет комментария [Ваша оценка:]. Удалим элемент в фильтре.');
                 return false;
             });
         }
 
         if (item && item.response && item.response.items && item.response.items.length) {
-            // console.log(item.post_id, ' Есть комментарии [Ваша оценка:] Удаляем запись ', item.response.items.length);
+            // debug(item.post_id + ' Есть комментарии [Ваша оценка:] Удаляем запись ', item.response.items.length);
             return false;
         } else {
-            // console.log(item.post_id, ' Нет комментария [Ваша оценка:]. Сохраняем запись.');
+            // debug(item.post_id + ' Нет комментария [Ваша оценка:]. Сохраняем запись.');
             return true;
         }
     });
@@ -560,10 +559,10 @@ function getRelevantComments(allCommentsPosts) {
 
 // ************************** startTimerProcessExit **************************
 function startTimerProcessExit() {
-    // process.send('!!!! Start Timer kill process 5 мин.');
+    debug('Start Timer kill process 5 min.');
 
     setTimeout(() => {
-        // process.send('!!!! Kill Process !!!!!');
+        debug('Kill Process');
 
         process.nextTick(() => {
             process.exit();
@@ -575,166 +574,82 @@ function startTimerProcessExit() {
 async function updateVites(offset, closePosts) {
     offset = offset || 0;
 
-    // console.log('\r\n updateVites step 0 offset: ', offset);
-    // process.send('updateVites step 0 offset:');
-    // console.log('updateVites step 0 offset:');
+    // debug('\r\n updateVites step 0 offset: ' + offset);
+    // debug('updateVites step 0 offset:');
+    // debug('updateVites step 0 offset:');
 
-    // console.log('\r\n updateVites step 1');
-    // process.send('updateVites step 1');
-    console.log('updateVites step 1');
+    // debug('\r\n updateVites step 1');
+    // debug('updateVites step 1');
+    debug('updateVites step 1');
     // let closePosts = await getClosePosts(offset);
-    // console.log('\r\n closePosts: ', closePosts);
+    // debug('\r\n closePosts: ' + closePosts);
 
-    // console.log('****** offset ************ ', offset);
+    // debug('****** offset ************ ' + offset);
     // closePosts.forEach(function(item) {
-    //     console.log(item['text']);
+    //     debug(item['text']);
     // });
 
     await delay();
     
-    console.log('\r\n updateVites step 2');
-    // process.send('updateVites step 2');
+    debug('\r\n updateVites step 2');
+    // debug('updateVites step 2');
     let likedClosePosts = await getLikedClosePosts(closePosts);
-    // console.log('likedClosePosts: ', likedClosePosts);
+    // debug('likedClosePosts: ' + likedClosePosts);
 
     await delay();
 
-    console.log('\r\n updateVites step 3');
-    // process.send('updateVites step 3');
+    debug('\r\n updateVites step 3');
+    // debug('updateVites step 3');
     let averageClosePosts = await getAverageClosePosts(likedClosePosts);
-    console.log('\r\n averageClosePosts: ');//, averageClosePosts);
+    debug('\r\n averageClosePosts: ');//, averageClosePosts);
 
     await delay();
 
     let openIdPosts = getIdOpenPosts(averageClosePosts);
-    console.log('\r\n openIdPosts: ');//, openIdPosts);
-    // process.send('openIdPosts: ' + openIdPosts);
+    debug('\r\n openIdPosts: ');//, openIdPosts);
+    // debug('openIdPosts: ' + openIdPosts);
 
     let allCommentsPosts = await getCommentsPosts(openIdPosts);
-    // console.log('\r\n all allCommentsPosts: ', allCommentsPosts);
-    // process.send('\r\n all allCommentsPosts: ' + allCommentsPosts);
+    // debug('\r\n all allCommentsPosts: ' + allCommentsPosts);
 
     await delay();
 
-    // console.log('\r\n getRelevantComments: ');
-    // process.send('\r\n all getRelevantComments: ');
-
     allCommentsPosts = getRelevantComments(allCommentsPosts);
 
-    console.log('\r\n Not voted allCommentsPosts: ', allCommentsPosts);
-    // process.send('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
+    debug('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
  
-    // await Promise.all(comments);
     await setVotes(allCommentsPosts);
 }
 
 async function updateAllData() {
     members = await getMembers();
 
-    console.log('members: ', members);
+    debug('members: ' + members);
 
     let closePosts = [];
 
     for (let i = 0; i < 2000; i += 100) {
-        console.log('i = ', i);
-        // process.send('start updateVites ' + i);
-        console.log('start updateVites ' + i);
+        debug('updateVites step: ' + i);
 
         let newClosePosts = await getClosePosts(i);
-        // console.log('newClosePosts: ', newClosePosts);
 
         if (newClosePosts) {
             closePosts = closePosts.concat(newClosePosts);
 
-            console.log('closePosts.len = ', closePosts.length);
+            debug('closePosts.len = ' + closePosts.length);
 
             await updateVites(i, newClosePosts);
 
             await delay();
         }
     }
-    // process.send('!!!! END SUCCESS updateVites');
 
     await updatePosts(closePosts);
-    // process.send('!!!! END SUCCESS updatePosts');
 
     startTimerProcessExit();
 }
 
 updateAllData();
-
-/*
-async function test() {
-        let video = [];
-
-        vk.request('wall.get', { 
-                owner_id: openGroup,
-                extended: 0,
-                // filter: 'others',
-            }, (data) => {
-                if (!data) {
-                    return resolve([]);
-                }
-                console.log('wall.get: ', data);
-                console.log('wall.get: ', data.response.items[0]);
-
-                if (data && data.response && data.response.items
-                    && Array.isArray(data.response.items) ) {
-                    
-
-                    data.response.items.forEach((item) => {
-                        if (item && item.attachments && item.attachments[0]
-                            && item.attachments[0].type && item.attachments[0].type == 'video') {
-                            // console.log('\r\n Open item: ', item);
-                            // console.log('\r\n Open item.attachments[0]: ', item.attachments[0]);
-                            video.push(item);
-                        }
-                    });
-
-
-                }
-
-                vk.request('wall.get', { 
-                        owner_id: closeGroup,
-                        extended: 0,
-                        filter: 'all',
-                        offset: 0
-                    }, async function (data) {
-                        if (!data) {
-                            return resolve([]);
-                        }
-                        console.log('wall.get close : ', data);
-                        console.log('wall.get close [0] : ', data.response.items[0]);
-
-                        let video2 = [];
-                        
-
-                        if (data && data.response && data.response.items
-                            && Array.isArray(data.response.items) ) {
-
-                            data.response.items.forEach((item) => {
-                                if (item && item.attachments && item.attachments[0]
-                                    && item.attachments[0].type && item.attachments[0].type == 'video') {
-                                    video2.push(item)
-                                }
-                            });
-                        }
-
-                        let newVideo = await getNewPosts(video, video2);
-
-                        // console.log('************** newVideo: ', newVideo);
-                        console.log('************** newVideo attach[0]: ', newVideo[0].attachments);
-                    }
-                );
-
-
-            }
-        );
-}
-
-test();
-*/
-
 
 // ******************************** Other ********************************
 
@@ -744,7 +659,7 @@ test();
 
 allCommentsPosts.some((item) => {
     item.response.items.forEach((comment, i) => {
-        // console.log('\r\n comment: ', comment, '\r\n owner_id: ', item.owner_id, '\r\n post_id: ', item.post_id, '\r\n length: ', item.response.items.length);
+        // debug('\r\n comment: ', comment, '\r\n owner_id: ', item.owner_id, '\r\n post_id: ', item.post_id, '\r\n length: ', item.response.items.length);
 
         if ( comment.from_id == closeGroup 
             && comment.text.indexOf('Ваша оценка:') ) {
@@ -772,7 +687,7 @@ allCommentsPosts.forEach((item, i) => {
             if (!data) {
                 return resolve(false);
             }
-            console.log(data);
+            debug(data);
         });
 
         // сделать комментарий от имени группы
@@ -783,7 +698,7 @@ allCommentsPosts.forEach((item, i) => {
 
 
 function getOpenPostsById(idPosts) {
-    console.log('getOpenPostsById: ', idPosts);
+    debug('getOpenPostsById: ', idPosts);
 
     return new Promise(function(resolve) {
         vk.request('wall.getById', { 
@@ -792,7 +707,7 @@ function getOpenPostsById(idPosts) {
                 if (!data) {
                     return resolve(false);
                 }
-                console.log('! wall.getById: ', data);
+                debug('! wall.getById: ', data);
             }
         );
     });
@@ -823,31 +738,106 @@ function getIdOpenPosts(posts) {
 let request = require('request');
 request('https://vk.com/video441461955_456239195', function (err, response, body) {
     if (err) {
-        console.log('error:', error);
+        debug('error:', error);
     }
 
     if (response) {
-        // console.log('statusCode:', response && response.statusCode);
+        // debug('statusCode:', response && response.statusCode);
     }
 
     if (body) {
-        console.log('body:', body);
+        debug('body:', body);
 
         let fs = require('fs');
         let urlVideo = 'https://cs534505.vkuservideo.net//u186904430//videos//2c87caeced.480.mp4?extra=QSSkPOJsUv3sz9THnk9rLS62UBr-1Ff5LOmKtxMKz-HVNlOCC8NKKCUv9m-gy_yRSaR4GIEqVO82y4stuySyOBQ3rBxlGEORyJNDjJy1mqxkNhMrAk6nlQyYM-R_hDuA';
 
         request(urlVideo)
             .on('response', function(response) {
-                console.log(response.statusCode);
-                console.log(response.headers['content-type']);
+                debug(response.statusCode);
+                debug(response.headers['content-type']);
             })
             .on('end', function() {
-                console.log('end!!!');
+                debug('end!!!');
             })
             .on('error', function(err) {
-                console.log(err)
+                debug(err)
             })
             .pipe(fs.createWriteStream('testVideo'));
     }
 });
+*/
+
+
+
+
+/*
+async function test() {
+        let video = [];
+
+        vk.request('wall.get', { 
+                owner_id: openGroup,
+                extended: 0,
+                // filter: 'others',
+            }, (data) => {
+                if (!data) {
+                    return resolve([]);
+                }
+                debug('wall.get: ', data);
+                debug('wall.get: ', data.response.items[0]);
+
+                if (data && data.response && data.response.items
+                    && Array.isArray(data.response.items) ) {
+                    
+
+                    data.response.items.forEach((item) => {
+                        if (item && item.attachments && item.attachments[0]
+                            && item.attachments[0].type && item.attachments[0].type == 'video') {
+                            // debug('\r\n Open item: ', item);
+                            // debug('\r\n Open item.attachments[0]: ', item.attachments[0]);
+                            video.push(item);
+                        }
+                    });
+
+
+                }
+
+                vk.request('wall.get', { 
+                        owner_id: closeGroup,
+                        extended: 0,
+                        filter: 'all',
+                        offset: 0
+                    }, async function (data) {
+                        if (!data) {
+                            return resolve([]);
+                        }
+                        debug('wall.get close : ', data);
+                        debug('wall.get close [0] : ', data.response.items[0]);
+
+                        let video2 = [];
+                        
+
+                        if (data && data.response && data.response.items
+                            && Array.isArray(data.response.items) ) {
+
+                            data.response.items.forEach((item) => {
+                                if (item && item.attachments && item.attachments[0]
+                                    && item.attachments[0].type && item.attachments[0].type == 'video') {
+                                    video2.push(item)
+                                }
+                            });
+                        }
+
+                        let newVideo = await getNewPosts(video, video2);
+
+                        // debug('************** newVideo: ', newVideo);
+                        debug('************** newVideo attach[0]: ', newVideo[0].attachments);
+                    }
+                );
+
+
+            }
+        );
+}
+
+test();
 */
