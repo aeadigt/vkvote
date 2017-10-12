@@ -94,8 +94,8 @@ function getClosePosts(offset) {
                 offset: offset,
                 count: 100
             }, (data) => {
-                if (!data) {
-                    return resolve([]);
+                if ( (!data) || (!data.response) || (!data.response.items) ) {
+                    process.exit('getClosePosts not fount data.response.items');
                 }
 
                 let video = [];
@@ -280,8 +280,6 @@ async function updatePosts(closePosts) {
     let lastClosePosts = await getClosePosts();
     if (lastClosePosts) {
         closePosts = closePosts.concat(lastClosePosts);
-    } else {
-        process.exit('lastClosePosts == []');
     }
     // debug('\r\n closePosts: ' + closePosts);
 
