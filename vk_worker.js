@@ -10,9 +10,10 @@ function debug(msg) {
 
 // ************************** uncaughtException **************************
 process.on('uncaughtException', (err) => {
-    debug('uncaughtException ' +  err.stack);
+    debug('\r\n uncaughtException ' +  err.stack);
 
     process.nextTick(() => {
+        debug('uncaughtException nextTick process.exit');
         process.exit('uncaughtException err: ' + err.stack);
     });
     
@@ -97,6 +98,7 @@ function getClosePosts(offset) {
                 count: 100
             }, (data) => {
                 if ( (!data) || (!data.response) || (!data.response.items) ) {
+                    debug('getClosePosts process.exit');
                     process.exit('getClosePosts not fount data.response.items');
                 }
 
@@ -224,6 +226,8 @@ function createPoll(video, idOpenPost) {
 
 
 function sendNewVideo(video, poll, idOpenPost) {
+    debug('Добавлен пост с номером: ' + idOpenPost);
+
     // Отправляем видео
     vk.request('wall.post', { 
             owner_id: closeGroup,
@@ -236,7 +240,7 @@ function sendNewVideo(video, poll, idOpenPost) {
                 return;
             }
 
-            debug('\r\n wall.post: ' + data);
+            // debug('\r\n wall.post: ' + data);
 
             if (data && data.response 
                 && data.response.post_id) {
@@ -251,10 +255,12 @@ function alertPeoples(postId) {
         return false;
     }
 
-    debug('\r\n alertPeoples postId: ' + postId + ' members: ' + members);
+    // debug('\r\n alertPeoples postId: ' + postId + ' members: ' + members);
 
     members.forEach((member) => {
         if (member) {
+            debug('Оповещение о новом посте id пользователей: ' + member);
+
             vk.request('messages.send', {
                 user_id: member,
                 attachment: 'wall' + closeGroup + '_' + postId
@@ -262,7 +268,7 @@ function alertPeoples(postId) {
                 if (!data) {
                     return false;
                 }
-                debug('alertPeoples data: ' + data);
+                // debug('alertPeoples data: ' + data);
                 return true;
             });
         }
@@ -274,31 +280,31 @@ function alertPeoples(postId) {
 
 // ************************** update Posts **************************
 async function updatePosts(closePosts) {
-    debug('updatePosts step 1');
+    // debug('updatePosts step 1');
 
     let openPosts = await getOpenPosts();
     // debug('\r\n openPosts: ', openPosts);
 
     await delay();
 
-    debug('\r\n updatePosts step 2');
+    // debug('\r\n updatePosts step 2');
     // debug('updatePosts step 2');
-    let lastClosePosts = await getClosePosts();
-    if (lastClosePosts) {
-        closePosts = closePosts.concat(lastClosePosts);
-    }
+    // let lastClosePosts = await getClosePosts();
+    // if (lastClosePosts) {
+    //     closePosts = closePosts.concat(lastClosePosts);
+    // }
     // debug('\r\n closePosts: ' + closePosts);
 
     await delay();
 
-    debug('\r\n updatePosts step 3');
+    // debug('\r\n updatePosts step 3');
     // debug('updatePosts step 3');
     let newPosts = await getNewPosts(openPosts, closePosts);
     // debug('\r\n newPosts: ' + newPosts);
 
     await delay();
 
-    debug('\r\n updatePosts step 4');
+    // debug('\r\n updatePosts step 4');
     // debug('updatePosts step 4');
     sendAllNewVideo(newPosts);
 }
@@ -336,7 +342,7 @@ function getPollById(post) {
                             post.poll = data;
                             return resolve(post);
                         } catch (err) {
-                            console.error('error: ', err);
+                            debug('error: ' + err);
                             return resolve(false);
                         }
                     }
@@ -499,11 +505,11 @@ function getIdOpenPosts(posts) {
 
 // ************************** setVotes **************************
 function setVotes(openIdPosts) {
-    debug('setVotes openIdPosts: ' + openIdPosts);
+    // debug('\r\n setVotes openIdPosts: ' + openIdPosts);
     
     if (openIdPosts) {
         openIdPosts.forEach((item, i) => {
-            debug('setVotes openIdPosts: ' + item.post_id);
+            debug('\r\nДобавлен комментарий к посту: ' + item.post_id + 'Ваша оценка: ' + openIdPosts[i].average);
 
             vk.request('wall.createComment', {
                 owner_id: openGroup,
@@ -515,7 +521,7 @@ function setVotes(openIdPosts) {
                 if (!data) {
                     return false;
                 }
-                debug('wall.createComment data: ' + data);
+                // debug('wall.createComment data: ' + data);
                 return true;
             });
         });
@@ -539,11 +545,11 @@ function getRelevantComments(allCommentsPosts) {
 
                 if (item && item.post_id && comment && item.owner_id
                     && item.offset && item.response && item.response.items && item.response.items.length) {
-                    debug('\r\n ' + item.post_id + ' \r\n comment: ' + comment +
-                        '\r\n owner_id: ' + item.owner_id + 
-                        '\r\n post_id: ' + item.post_id + 
-                        '\r\n offset: ' + item.offset + 
-                        '\r\n length: ' + item.response.items.length);
+                    // debug('\r\n ' + item.post_id + ' \r\n comment: ' + comment +
+                    //     '\r\n owner_id: ' + item.owner_id + 
+                    //     '\r\n post_id: ' + item.post_id + 
+                    //     '\r\n offset: ' + item.offset + 
+                    //     '\r\n length: ' + item.response.items.length);
                 }
 
                 if ( comment.from_id == openGroup 
@@ -569,15 +575,16 @@ function getRelevantComments(allCommentsPosts) {
 
 // ************************** startTimerProcessExit **************************
 function startTimerProcessExit() {
-    debug('Start Timer kill process 5 min.');
+    debug('Запущен 10 мин. таймер завершения процесса');
 
     setTimeout(() => {
-        debug('Kill Process');
+        debug('Завершение процесса');
 
         process.nextTick(() => {
+            debug('startTimerProcessExit nextTick process.exit');
             process.exit();
         });
-    }, 60000 * 5);
+    }, 60000 * 10);
 }
 
 // ************************** updateVites **************************
@@ -590,7 +597,7 @@ async function updateVites(offset, closePosts) {
 
     // debug('\r\n updateVites step 1');
     // debug('updateVites step 1');
-    debug('updateVites step 1');
+    // debug('\r\n updateVites step 1');
     // let closePosts = await getClosePosts(offset);
     // debug('\r\n closePosts: ' + closePosts);
 
@@ -601,22 +608,22 @@ async function updateVites(offset, closePosts) {
 
     await delay();
 
-    debug('\r\n updateVites step 2');
+    // debug('\r\n updateVites step 2');
     // debug('updateVites step 2');
     let likedClosePosts = await getLikedClosePosts(closePosts);
     // debug('likedClosePosts: ' + likedClosePosts);
 
     await delay();
 
-    debug('\r\n updateVites step 3');
+    // debug('\r\n updateVites step 3');
     // debug('updateVites step 3');
     let averageClosePosts = await getAverageClosePosts(likedClosePosts);
-    debug('\r\n averageClosePosts: ');//, averageClosePosts);
+    // debug('\r\n averageClosePosts: ');//, averageClosePosts);
 
     await delay();
 
     let openIdPosts = getIdOpenPosts(averageClosePosts);
-    debug('\r\n openIdPosts: ');//, openIdPosts);
+    // debug('\r\n openIdPosts: ');//, openIdPosts);
     // debug('openIdPosts: ' + openIdPosts);
 
     let allCommentsPosts = await getCommentsPosts(openIdPosts);
@@ -626,7 +633,7 @@ async function updateVites(offset, closePosts) {
 
     allCommentsPosts = getRelevantComments(allCommentsPosts);
 
-    debug('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
+    // debug('\r\n Not voted allCommentsPosts: ' + allCommentsPosts);
  
     await setVotes(allCommentsPosts);
 }
@@ -634,19 +641,19 @@ async function updateVites(offset, closePosts) {
 async function updateAllData() {
     members = await getMembers();
 
-    debug('members: ' + members);
+    debug('\r\n members: ' + members);
 
     let closePosts = [];
 
     for (let i = 0; i < 2000; i += 100) {
-        debug('updateVites step: ' + i);
+        // debug('updateVites step: ' + i);
 
         let newClosePosts = await getClosePosts(i);
 
         if (newClosePosts) {
             closePosts = closePosts.concat(newClosePosts);
 
-            debug('closePosts.len = ' + closePosts.length);
+            // debug('\r\n closePosts.len = ' + closePosts.length);
 
             await updateVites(i, newClosePosts);
 
