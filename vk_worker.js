@@ -49,6 +49,8 @@ let openGroup = '-150899652';
 let closeGroup = '-150899833';
 let likeAdmin = '441461955';
 let members = [];
+let checkedClosedPosts = {};
+let newVideoId = {};
 // ************************** Vk request **************************
 
 // ************************** Common Requests **************************
@@ -191,7 +193,11 @@ function sendAllNewVideo(video) {
             && item.attachments[0].video.owner_id && item.attachments[0].video.id) {
 
             let video = 'video' + item.attachments[0].video.owner_id + '_' + item.attachments[0].video.id;
-            createPoll(video, item.id);
+            if (item.id && (!newVideoId[item.id]) ) {
+                newVideoId[item.id] = true;
+
+                createPoll(video, item.id);
+            }
         }
     });
 };
@@ -433,7 +439,7 @@ function getCommentsById(idPost) {
                 count: 1000,
                 sort: 'desc'
             }, (data) => {
-                if (!data && !postData) {
+                if ( (!data) || (!data.response) ) {
                     return resolve(false);
                 }
 
@@ -476,12 +482,16 @@ function getIdOpenPosts(posts) {
 
     if (posts) {
         posts.forEach((item) => {
-            let id = { 
-                owner_id: openGroup, 
-                post_id: item.text, 
-                average: item.poll.response.average
-            };
-            idPosts.push(id);
+            if ( (item.text) && (!checkedClosedPosts[item.text]) ) {
+                checkedClosedPosts[item.text] = true;
+
+                let id = { 
+                    owner_id: openGroup, 
+                    post_id: item.text, 
+                    average: item.poll.response.average
+                };
+                idPosts.push(id);
+            }
         });
     }
     return idPosts;
@@ -493,6 +503,8 @@ function setVotes(openIdPosts) {
     
     if (openIdPosts) {
         openIdPosts.forEach((item, i) => {
+            debug('setVotes openIdPosts: ' + item.post_id);
+
             vk.request('wall.createComment', {
                 owner_id: openGroup,
                 post_id: item.post_id,
@@ -588,7 +600,7 @@ async function updateVites(offset, closePosts) {
     // });
 
     await delay();
-    
+
     debug('\r\n updateVites step 2');
     // debug('updateVites step 2');
     let likedClosePosts = await getLikedClosePosts(closePosts);
